@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { DatabaseService } from './database.service';
-import { Inspeccion } from '../models/inspeccion.model';
+import { Inspeccion, ResultadoInspeccion } from '../models/inspeccion.model';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable({
@@ -21,6 +21,25 @@ export class InspeccionService {
    */
   async getInspecciones(): Promise<Inspeccion[]> {
     return await this.databaseService.getInspecciones();
+  }
+
+  /** Actualizar solo la foto guardada en ambas copias locales, sin descargar toda la inspección. */
+  async actualizarFotoFinalLocal(
+    inspeccionLocalId: string,
+    resultadoLocalId: string,
+    cambios: Partial<ResultadoInspeccion>
+  ): Promise<void> {
+    await this.databaseService.transaction('rw',
+      this.databaseService.inspecciones,
+      this.databaseService.resultados_inspeccion,
+      async () => {
+        await this.databaseService.inspecciones.where('local_id').equals(inspeccionLocalId).modify((inspeccion) => {
+          const resultado = inspeccion.resultados?.find((item) => item.local_id === resultadoLocalId);
+          if (resultado) Object.assign(resultado, cambios);
+        });
+        await this.databaseService.resultados_inspeccion.where('local_id').equals(resultadoLocalId).modify(cambios);
+      }
+    );
   }
 
   /**

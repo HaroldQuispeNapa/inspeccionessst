@@ -1,6 +1,20 @@
 import { Empresa, Area, Personal, Fundo } from './catalogo.model';
 
 export type TipoInspeccion = 'Planeada' | 'No Planeada' | 'Otro';
+
+export type CategoriaInspeccion = 'Inspecciones de maquinaria agrícola' | 
+'Inspección del CSST' |
+'Inspección de actos y condiciones inseguras'|
+'Inspección de luces de emergencia'|
+'Inspección de duchas y lavaojos de emergencia'|
+'Inspección de sistema de lucha contra incendios'|
+'Inspección de manejo de agroquímicos' |
+'Inspección de instalaciones eléctricas'|
+'Inspección de uso de EPPs'|
+'Inspección de buses de transporte de personal'|
+'Inspección de equipos de altura (arnés, líneas de vida)'|
+'Inspecciones internas de Seguridad y Salud en el Trabajo';
+
 export type NivelRiesgo = 'Alto' | 'Medio' | 'Bajo';
 export type EstadoResultado =
   | 'Buena Práctica'
@@ -48,6 +62,15 @@ export interface InspeccionResponsableArea {
   updated_at?: string;
 }
 
+export interface ResultadoComentario {
+  id: number;
+  resultado_id: number;
+  contenido: string;
+  user_id: number;
+  user?: { id: number; name: string };
+  created_at: string;
+}
+
 // Resultado/Hallazgo de inspección
 export interface ResultadoInspeccion {
   id?: number;
@@ -73,6 +96,7 @@ export interface ResultadoInspeccion {
   synced_at?: string;
   // Relaciones
   responsable?: Personal;
+  comentarios?: ResultadoComentario[];
   visores?: ResultadoVisor[];
   responsablesLevantamiento?: ResultadoResponsableLevantamiento[];
   fotoInicialAprobador?: Personal;
@@ -140,6 +164,8 @@ export interface Inspeccion {
   empresa_id: number;
   area_id?: number | null; // Ahora es opcional para compatibilidad (se usa relación areas[])
   tipo_inspeccion: TipoInspeccion;
+  categoria?: CategoriaInspeccion | null;
+  placa?: string | null;
   tipo_inspeccion_otro?: string;
   vigencia_desde?: string;
   vigencia_hasta?: string;

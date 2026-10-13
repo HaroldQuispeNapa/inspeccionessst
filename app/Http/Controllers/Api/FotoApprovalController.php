@@ -35,7 +35,8 @@ class FotoApprovalController extends Controller
         // Verificar que el usuario sea responsable de levantamiento del resultado
         // Nota: responsablesLevantamiento retorna objetos Personal con 'id', no 'personal_id'
         $esResponsableLevantamiento = $resultado->responsablesLevantamiento
-            ->contains('id', $user->personal_id);
+            ->contains('id', $user->personal_id) ||
+            ($user->personal_id && (int) $resultado->responsable_id === (int) $user->personal_id);
 
         if (!$esResponsableLevantamiento && !$user->hasRole('Administrador')) {
             return response()->json([
@@ -55,9 +56,11 @@ class FotoApprovalController extends Controller
         try {
             // Procesar imagen base64
             $fotoBase64 = $request->foto;
+            $extension = 'jpg';
             
             // Remover el prefijo data:image si existe
             if (preg_match('/^data:image\/(\w+);base64,/', $fotoBase64, $type)) {
+                $extension = ['jpeg' => 'jpg', 'jpg' => 'jpg', 'png' => 'png', 'webp' => 'webp', 'gif' => 'gif'][strtolower($type[1])] ?? 'jpg';
                 $fotoBase64 = substr($fotoBase64, strpos($fotoBase64, ',') + 1);
             }
             
@@ -71,7 +74,7 @@ class FotoApprovalController extends Controller
             }
 
             // Generar nombre único
-            $filename = 'levantamiento_' . $resultadoId . '_' . Str::random(10) . '.jpg';
+            $filename = 'levantamiento_' . $resultadoId . '_' . Str::random(10) . '.' . $extension;
             $path = 'inspecciones/fotos_finales/' . $filename;
             
             // Guardar archivo

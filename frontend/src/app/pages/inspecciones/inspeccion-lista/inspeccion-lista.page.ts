@@ -27,6 +27,7 @@ import {
   IonSkeletonText,
   IonSelect,
   IonSelectOption,
+  IonInput,
 } from '@ionic/angular/standalone';
 import { CommonModule } from '@angular/common';
 import { DatabaseService } from '../../../services/database.service';
@@ -89,6 +90,7 @@ import {
     IonSkeletonText,
     IonSelect,
     IonSelectOption,
+    IonInput,
   ],
 })
 export class InspeccionListaPage implements OnInit {
@@ -97,6 +99,7 @@ export class InspeccionListaPage implements OnInit {
   inspeccionesVisibles: Inspeccion[] = [];
   sedes: any[] = [];
   searchTerm = '';
+  placaFilter = '';
   sedeFilter: number | 'all' = 'all';
   estadoFilter: 'all' | 'Pendiente' | 'Cumplimiento' | 'Ejecutado' = 'all';
   isLoadingInspecciones = false;
@@ -334,6 +337,7 @@ export class InspeccionListaPage implements OnInit {
 
   filterInspecciones(resetScroll: boolean = true) {
     const term = this.searchTerm.toLowerCase().trim();
+    const placa = this.placaFilter.trim().toLowerCase();
 
     this.inspeccionesFiltradas = this.inspecciones.filter((inspeccion) => {
       const matchesTerm =
@@ -342,7 +346,9 @@ export class InspeccionListaPage implements OnInit {
         inspeccion.area?.name?.toLowerCase().includes(term) ||
         inspeccion.zona_inspeccionada?.toLowerCase().includes(term) ||
         inspeccion.numero_registro?.toLowerCase().includes(term) ||
+        inspeccion.placa?.toLowerCase().includes(term) ||
         inspeccion.tipo_inspeccion?.toLowerCase().includes(term);
+      const matchesPlaca = !placa || inspeccion.placa?.toLowerCase().includes(placa);
       const matchesSede =
         this.sedeFilter === 'all' ||
         Number(inspeccion.fundo_id) === Number(this.sedeFilter);
@@ -350,7 +356,7 @@ export class InspeccionListaPage implements OnInit {
         this.estadoFilter === 'all' ||
         this.getEstadoInspeccion(inspeccion) === this.estadoFilter;
 
-      return matchesTerm && matchesSede && matchesEstado;
+      return matchesTerm && matchesPlaca && matchesSede && matchesEstado;
     });
 
     if (resetScroll) {
@@ -362,6 +368,7 @@ export class InspeccionListaPage implements OnInit {
 
   clearFilters() {
     this.searchTerm = '';
+    this.placaFilter = '';
     this.sedeFilter = 'all';
     this.estadoFilter = 'all';
     this.filterInspecciones();

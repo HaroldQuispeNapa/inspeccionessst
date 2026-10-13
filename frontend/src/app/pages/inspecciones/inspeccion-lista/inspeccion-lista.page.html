@@ -53,6 +53,10 @@
         <ion-select-option value="Ejecutado">Ejecutado</ion-select-option>
       </ion-select>
 
+      <ion-input label="Placa" labelPlacement="stacked" placeholder="Todas las placas"
+        [(ngModel)]="placaFilter" (ionInput)="filterInspecciones()" [clearInput]="true"
+        aria-label="Filtrar por placa"></ion-input>
+
       <ion-button fill="clear" color="light" size="small" (click)="clearFilters()">
         Limpiar
       </ion-button>
@@ -113,6 +117,7 @@
         <p>{{ inspeccion.empresa?.name || 'Sin empresa' }}</p>
         <p>{{ inspeccion.fundo?.nombre || 'Sin sede' }}</p>
         <p>{{ inspeccion.area?.name || 'Sin área' }}</p>
+        <p *ngIf="inspeccion.placa"><strong>Placa:</strong> {{ inspeccion.placa }}</p>
         <p class="detail-text">
           <ion-icon name="calendar-outline"></ion-icon>
           {{ formatDateTime(inspeccion.fecha_hora_inspeccion) }}
@@ -166,9 +171,9 @@
   <div class="empty-state" *ngIf="!isLoadingInspecciones && inspeccionesFiltradas.length === 0">
     <ion-icon name="document-text-outline" size="large"></ion-icon>
     <h3>No hay inspecciones</h3>
-    <p *ngIf="searchTerm || sedeFilter !== 'all' || estadoFilter !== 'all'">No se encontraron inspecciones con los filtros seleccionados</p>
-    <p *ngIf="!searchTerm && sedeFilter === 'all' && estadoFilter === 'all'">Crea tu primera inspección para comenzar</p>
-    <ion-button *ngIf="!searchTerm && sedeFilter === 'all' && estadoFilter === 'all'" (click)="nuevaInspeccion()">
+    <p *ngIf="searchTerm || placaFilter || sedeFilter !== 'all' || estadoFilter !== 'all'">No se encontraron inspecciones con los filtros seleccionados</p>
+    <p *ngIf="!searchTerm && !placaFilter && sedeFilter === 'all' && estadoFilter === 'all'">Crea tu primera inspección para comenzar</p>
+    <ion-button *ngIf="!searchTerm && !placaFilter && sedeFilter === 'all' && estadoFilter === 'all'" (click)="nuevaInspeccion()">
       <ion-icon slot="start" name="add-outline"></ion-icon>
       Nueva Inspección
     </ion-button>

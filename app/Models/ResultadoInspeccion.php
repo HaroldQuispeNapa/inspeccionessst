@@ -68,6 +68,11 @@ class ResultadoInspeccion extends Model
         return $this->belongsTo(Personal::class, 'responsable_id');
     }
 
+    public function comentarios()
+    {
+        return $this->hasMany(ResultadoComentario::class, 'resultado_id')->orderBy('id');
+    }
+
     public function visores()
     {
         return $this->belongsToMany(Personal::class, 'resultado_visores', 'resultado_id', 'personal_id')

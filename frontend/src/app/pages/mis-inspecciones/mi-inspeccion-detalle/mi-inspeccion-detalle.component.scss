@@ -31,7 +31,13 @@
 
 .foto-preview {
   width: 100%;
-  height: 120px;
+  max-width: 280px;
+  aspect-ratio: 1;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--ion-color-light);
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--ion-color-light-shade);
@@ -40,13 +46,16 @@
   img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    object-position: center;
   }
 }
 
 .foto-placeholder {
   width: 100%;
-  height: 120px;
+  max-width: 280px;
+  aspect-ratio: 1;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -118,3 +127,42 @@ ion-badge[color="riesgo-bajo"] {
 ion-chip {
   margin-left: 4px;
 }
+
+.foto-borrador {
+  text-align: center;
+  p { color: var(--ion-color-medium-shade); font-size: 13px; }
+}
+
+.foto-borrador-acciones {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.comentarios-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ion-color-light-shade);
+  h3 { font-size: 16px; font-weight: 600; }
+  ion-textarea { margin: 12px 0; }
+}
+
+.comentario-item {
+  margin: 12px 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--ion-color-light);
+  p { margin-bottom: 0; white-space: pre-line; overflow-wrap: anywhere; }
+}
+
+.comentario-meta {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.sin-comentarios { color: var(--ion-color-medium-shade); font-size: 13px; }
+.comentario-error { color: var(--ion-color-danger); }

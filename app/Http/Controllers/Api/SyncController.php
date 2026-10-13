@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class SyncController extends Controller
 {
@@ -358,6 +359,8 @@ class SyncController extends Controller
             'inspecciones.*.empresa_id' => 'nullable|exists:empresas,id',
             'inspecciones.*.area_id' => 'nullable|exists:areas,id',
             'inspecciones.*.tipo_inspeccion' => 'required|string',
+            'inspecciones.*.categoria' => ['nullable', 'string', 'max:80', Rule::in(Inspeccion::CATEGORIAS)],
+            'inspecciones.*.placa' => 'nullable|string|max:20',
             'inspecciones.*.tipo_inspeccion_otro' => 'nullable|string',
             'inspecciones.*.vigencia_desde' => 'nullable|date',
             'inspecciones.*.vigencia_hasta' => 'nullable|date',
@@ -385,6 +388,11 @@ class SyncController extends Controller
             'inspecciones.*.resultados.*.descripcion' => 'required|string',
             'inspecciones.*.resultados.*.nivel_riesgo' => 'required|in:Alto,Medio,Bajo',
             'inspecciones.*.resultados.*.estado' => 'nullable|in:Pendiente,En Proceso,Ejecutado,Cerrado,Cumplimiento,Buena Práctica',
+        ], [
+            'inspecciones.*.categoria.in' => 'La categoría seleccionada no está permitida. Revisa la categoría de la inspección.',
+            'inspecciones.*.categoria.string' => 'La categoría de la inspección debe ser un texto.',
+            'inspecciones.*.categoria.max' => 'La categoría de la inspección no puede superar 80 caracteres.',
+            'inspecciones.*.placa.max' => 'La placa no puede superar 20 caracteres.',
         ]);
 
         if ($validator->fails()) {
@@ -454,6 +462,9 @@ class SyncController extends Controller
                         'empresa_id' => $inspeccionData['empresa_id'] ?? null,
                         'area_id' => $inspeccionData['area_id'] ?? null,
                         'tipo_inspeccion' => $inspeccionData['tipo_inspeccion'],
+                        'categoria' => $inspeccionData['categoria'] ?? $existente->categoria,
+                        // Omitir el campo conserva la placa; enviar null permite quitarla.
+                        'placa' => array_key_exists('placa', $inspeccionData) ? $inspeccionData['placa'] : $existente->placa,
                         'tipo_inspeccion_otro' => $inspeccionData['tipo_inspeccion_otro'] ?? null,
                         'vigencia_desde' => $inspeccionData['vigencia_desde'] ?? null,
                         'vigencia_hasta' => $inspeccionData['vigencia_hasta'] ?? null,
@@ -495,6 +506,8 @@ class SyncController extends Controller
                     'empresa_id' => $inspeccionData['empresa_id'] ?? null,
                     'area_id' => $inspeccionData['area_id'] ?? null,
                     'tipo_inspeccion' => $inspeccionData['tipo_inspeccion'],
+                    'categoria' => $inspeccionData['categoria'] ?? null,
+                    'placa' => $inspeccionData['placa'] ?? null,
                     'tipo_inspeccion_otro' => $inspeccionData['tipo_inspeccion_otro'] ?? null,
                     'vigencia_desde' => $inspeccionData['vigencia_desde'] ?? null,
                     'vigencia_hasta' => $inspeccionData['vigencia_hasta'] ?? null,
@@ -616,6 +629,7 @@ class SyncController extends Controller
                 'resultados.visores:id,nombres,apellido_paterno,apellido_materno',
                 'resultados.responsablesLevantamiento:id,nombres,apellido_paterno,apellido_materno',
                 'resultados.responsable:id,nombres,apellido_paterno,apellido_materno',
+                'resultados.comentarios.user:id,name',
                 'resultados.fotoFinalAprobador:id,nombres,apellido_paterno,apellido_materno',
                 'resultados.fotoInicialAprobador:id,nombres,apellido_paterno,apellido_materno',
                 'responsableRegistro.personal:id,nombres,apellido_paterno,apellido_materno',
@@ -709,6 +723,7 @@ class SyncController extends Controller
                 'resultados.visores:id,nombres,apellido_paterno,apellido_materno',
                 'resultados.responsablesLevantamiento:id,nombres,apellido_paterno,apellido_materno',
                 'resultados.responsable:id,nombres,apellido_paterno,apellido_materno',
+                'resultados.comentarios.user:id,name',
                 'resultados.fotoFinalAprobador:id,nombres,apellido_paterno,apellido_materno',
                 'resultados.fotoInicialAprobador:id,nombres,apellido_paterno,apellido_materno',
                 'responsableRegistro.personal:id,nombres,apellido_paterno,apellido_materno',

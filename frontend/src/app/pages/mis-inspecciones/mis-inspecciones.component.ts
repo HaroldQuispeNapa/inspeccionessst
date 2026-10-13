@@ -98,6 +98,7 @@ export class MisInspeccionesComponent implements OnInit {
   filtroArea = '';
   filtroTipo = '';
   filtroEstado = '';
+  filtroPlaca = '';
   sedes: OpcionFiltro[] = [];
   areas: OpcionFiltro[] = [];
   tipos: string[] = [];
@@ -206,6 +207,7 @@ export class MisInspeccionesComponent implements OnInit {
         resultados,
         textoBusqueda: this.normalizarTexto([
           inspeccion.numero_registro,
+          inspeccion.placa,
           inspeccion.empresa?.name,
           sede.nombre,
           ...areas.map((area) => area.nombre),
@@ -229,11 +231,13 @@ export class MisInspeccionesComponent implements OnInit {
       this.filtroArea = '';
     }
     const busqueda = this.normalizarTexto(this.busqueda);
+    const placa = this.normalizarTexto(this.filtroPlaca);
     this.inspeccionesFiltradas = this.inspeccionesPreparadas.filter((vista) =>
       (!this.filtroSede || vista.sede.id === this.filtroSede) &&
       (!this.filtroArea || vista.areas.some((area) => area.id === this.filtroArea)) &&
       (!this.filtroTipo || vista.inspeccion.tipo_inspeccion === this.filtroTipo) &&
       (!this.filtroEstado || vista.resultados.some((resultado) => resultado.estado === this.filtroEstado)) &&
+      (!placa || this.normalizarTexto(vista.inspeccion.placa).includes(placa)) &&
       (!busqueda || vista.textoBusqueda.includes(busqueda))
     );
     this.totalResultados = this.inspeccionesFiltradas.reduce((total, vista) => total + vista.resultados.length, 0);
@@ -249,6 +253,7 @@ export class MisInspeccionesComponent implements OnInit {
     this.filtroArea = '';
     this.filtroTipo = '';
     this.filtroEstado = '';
+    this.filtroPlaca = '';
     this.aplicarFiltros();
   }
 
@@ -258,7 +263,7 @@ export class MisInspeccionesComponent implements OnInit {
   }
 
   get hayFiltros(): boolean {
-    return !!(this.busqueda || this.filtroSede || this.filtroArea || this.filtroTipo || this.filtroEstado);
+    return !!(this.busqueda || this.filtroSede || this.filtroArea || this.filtroTipo || this.filtroEstado || this.filtroPlaca);
   }
 
   mostrarMas() {

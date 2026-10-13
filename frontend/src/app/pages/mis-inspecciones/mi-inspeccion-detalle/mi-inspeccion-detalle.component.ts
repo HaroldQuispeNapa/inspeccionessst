@@ -1,11 +1,13 @@
 import {
   Component,
   OnInit,
+  OnDestroy,
   CUSTOM_ELEMENTS_SCHEMA,
   ChangeDetectorRef,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import {
   NavController,
   AlertController,
@@ -37,7 +39,7 @@ import {
   IonCol,
   IonBadge,
   IonText,
-  IonGrid,
+  IonTextarea,
 } from '@ionic/angular/standalone';
 import { AuthService } from '../../../services/auth.service';
 import { InspeccionService } from '../../../services/inspeccion.service';
@@ -67,11 +69,13 @@ import {
   thumbsDownOutline,
 } from 'ionicons/icons';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { prepararFotoParaEnvio } from '../../../services/foto-upload';
 
 interface ResultadoConRol extends ResultadoInspeccion {
   miRol: 'responsable_levantamiento' | 'visor' | 'inspector' | null;
   puedeSubirFoto: boolean;
   puedeValidar: boolean;
+  puedeComentar: boolean;
 }
 
 @Component({
@@ -82,6 +86,7 @@ interface ResultadoConRol extends ResultadoInspeccion {
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   imports: [
     CommonModule,
+    FormsModule,
     IonHeader,
     IonToolbar,
     IonButtons,
@@ -105,15 +110,23 @@ interface ResultadoConRol extends ResultadoInspeccion {
     IonCol,
     IonBadge,
     IonText,
-    IonGrid,
+    IonTextarea,
   ],
 })
-export class MiInspeccionDetalleComponent implements OnInit {
+export class MiInspeccionDetalleComponent implements OnInit, OnDestroy {
   inspeccion: Inspeccion | null = null;
   resultados: ResultadoConRol[] = [];
   loading = true;
   currentUser: any;
   esInspector = false;
+  fotosPendientes: Record<number, string> = {};
+  guardandoFotos: Record<number, boolean> = {};
+  seleccionandoFotos: Record<number, boolean> = {};
+  fotosPreparadas: Record<number, string> = {};
+  private destruido = false;
+  comentariosBorrador: Record<number, string> = {};
+  guardandoComentarios: Record<number, boolean> = {};
+  erroresComentario: Record<number, string> = {};
 
   constructor(
     private route: ActivatedRoute,
@@ -172,6 +185,17 @@ export class MiInspeccionDetalleComponent implements OnInit {
     }
   }
 
+  ngOnDestroy() {
+    this.destruido = true;
+    Object.values(this.fotosPendientes).forEach((url) => this.liberarFoto(url));
+    this.fotosPendientes = {};
+    this.fotosPreparadas = {};
+  }
+
+  private liberarFoto(url?: string) {
+    if (url?.startsWith('blob:')) URL.revokeObjectURL(url);
+  }
+
   verificarRolInspector() {
     if (!this.inspeccion || !this.currentUser) return;
 
@@ -195,6 +219,7 @@ export class MiInspeccionDetalleComponent implements OnInit {
     }
 
     const personalId = this.currentUser.personal_id;
+    const esAdmin = (this.currentUser.roles || []).some((rol: any) => rol.name === 'Administrador');
 
     // console.log('Procesando resultados para personal ID:', personalId);
     // console.log('Resultados originales:', this.inspeccion.resultados);
@@ -202,7 +227,7 @@ export class MiInspeccionDetalleComponent implements OnInit {
     this.resultados = this.inspeccion.resultados.map((resultado) => {
       // Determinar el rol del usuario en este resultado
       // Puede subir foto si es responsable_id O está en responsablesLevantamiento
-      const esResponsableDirecto = resultado.responsable_id === personalId;
+      const esResponsableDirecto = !!personalId && String(resultado.responsable_id) === String(personalId);
 
       // El backend puede retornar con snake_case o camelCase
       const responsablesLev =
@@ -211,9 +236,7 @@ export class MiInspeccionDetalleComponent implements OnInit {
         [];
       const esResponsableLevantamientoPivot = responsablesLev.some(
         (r: any) =>
-          r.id === personalId ||
-          r.personal_id === personalId ||
-          r.pivot?.personal_id === personalId
+          !!personalId && String(r.personal_id ?? r.pivot?.personal_id ?? r.id) === String(personalId)
       );
       const esResponsableLevantamiento =
         esResponsableDirecto || esResponsableLevantamientoPivot;
@@ -266,7 +289,7 @@ export class MiInspeccionDetalleComponent implements OnInit {
       // console.log('No hay foto o fue rechazada:', noHayFotoOFueRechazada);
 
       const puedeSubirFoto: boolean =
-        esResponsableLevantamiento &&
+        (esResponsableLevantamiento || esAdmin) &&
         resultado.estado === 'Pendiente' &&
         noHayFotoOFueRechazada;
 
@@ -292,14 +315,12 @@ export class MiInspeccionDetalleComponent implements OnInit {
         miRol,
         puedeSubirFoto,
         puedeValidar,
+        puedeComentar: esResponsableLevantamiento || esAdmin,
       } as ResultadoConRol;
     });
 
     // Filtrar solo los resultados donde el usuario tiene algún rol
     // (excepto si es administrador o inspector, que ve todos)
-    const userRoles = this.currentUser.roles || [];
-    const esAdmin = userRoles.some((r: any) => r.name === 'Administrador');
-
     if (!esAdmin && !this.esInspector) {
       this.resultados = this.resultados.filter((r) => r.miRol !== null);
     }
@@ -400,20 +421,99 @@ export class MiInspeccionDetalleComponent implements OnInit {
     await actionSheet.present();
   }
 
-  async tomarFoto(resultado: ResultadoConRol, source: CameraSource) {
-    try {
-      const image = await Camera.getPhoto({
-        quality: 80,
-        allowEditing: false,
-        resultType: CameraResultType.Base64,
-        source: source,
-      });
+  protected capturarFoto(source: CameraSource) {
+    return Camera.getPhoto({
+      quality: 80,
+      allowEditing: false,
+      resultType: CameraResultType.Uri,
+      source,
+    });
+  }
 
-      if (image.base64String) {
-        await this.enviarFotoFinal(resultado, image.base64String);
+  async tomarFoto(resultado: ResultadoConRol, source: CameraSource) {
+    const id = resultado.id;
+    if (!id || !resultado.puedeSubirFoto || this.guardandoFotos[id] || this.seleccionandoFotos[id]) return;
+    this.seleccionandoFotos[id] = true;
+    try {
+      const image = await this.capturarFoto(source);
+      if (image.webPath) {
+        if (this.destruido) {
+          this.liberarFoto(image.webPath);
+          return;
+        }
+        this.liberarFoto(this.fotosPendientes[id]);
+        this.fotosPendientes[id] = image.webPath;
+        delete this.fotosPreparadas[id];
+        this.cdr.detectChanges();
       }
     } catch (error) {
       console.error('Error al tomar foto:', error);
+    } finally {
+      this.seleccionandoFotos[id] = false;
+      if (!this.destruido) this.cdr.detectChanges();
+    }
+  }
+
+  limpiarFotoSeleccionada(resultado: ResultadoConRol) {
+    if (!this.destruido && resultado.id && !this.guardandoFotos[resultado.id]) {
+      const foto = this.fotosPendientes[resultado.id];
+      delete this.fotosPendientes[resultado.id];
+      delete this.fotosPreparadas[resultado.id];
+      // Refrescar la vista antes de liberar el archivo, incluso desde un callback fuera de Angular.
+      this.cdr.detectChanges();
+      this.liberarFoto(foto);
+    }
+  }
+
+  protected prepararFoto(url: string) {
+    return prepararFotoParaEnvio(url);
+  }
+
+  async guardarFotoSeleccionada(resultado: ResultadoConRol) {
+    const id = resultado.id;
+    if (!id || !resultado.puedeSubirFoto || !this.fotosPendientes[id] || this.guardandoFotos[id]) return;
+    this.guardandoFotos[id] = true;
+    try {
+      this.cdr.detectChanges();
+      const foto = this.fotosPreparadas[id] || await this.prepararFoto(this.fotosPendientes[id]);
+      if (this.destruido) return;
+      this.fotosPreparadas[id] = foto;
+      await this.enviarFotoFinal(resultado, foto);
+    } catch (error: any) {
+      await this.mostrarAlerta('Error', error.message || 'No se pudo preparar la foto. Intenta nuevamente.');
+    } finally {
+      this.guardandoFotos[id] = false;
+    }
+  }
+
+  async guardarComentario(resultado: ResultadoConRol) {
+    const id = resultado.id;
+    if (!id || !resultado.puedeComentar || this.guardandoComentarios[id]) return;
+    const contenido = (this.comentariosBorrador[id] || '').trim();
+    if (!contenido || contenido.length > 2000) {
+      this.erroresComentario[id] = 'Escribe un comentario de entre 1 y 2000 caracteres.';
+      return;
+    }
+    this.guardandoComentarios[id] = true;
+    delete this.erroresComentario[id];
+    try {
+      const response = await this.apiService.post(`/resultados/${id}/comentarios`, { contenido });
+      if (!response?.success || !response.data) throw new Error('No se pudo registrar el comentario.');
+      resultado.comentarios = [...(resultado.comentarios || []), response.data];
+      const original = this.inspeccion?.resultados?.find((item) => item.id === id);
+      if (original) original.comentarios = resultado.comentarios;
+      delete this.comentariosBorrador[id];
+      if (this.inspeccion?.id) {
+        try {
+          await this.syncService.syncInspeccionFromServer(this.inspeccion.id);
+        } catch (error) {
+          console.warn('Comentario guardado; no se pudo actualizar la copia local:', error);
+        }
+      }
+    } catch (error: any) {
+      this.erroresComentario[id] = error.message || 'No se pudo guardar el comentario. Intenta nuevamente.';
+    } finally {
+      this.guardandoComentarios[id] = false;
     }
   }
 
@@ -427,25 +527,31 @@ export class MiInspeccionDetalleComponent implements OnInit {
       const response = await this.apiService.post(
         `/resultados/${resultado.id}/foto-final`,
         {
-          foto: `data:image/jpeg;base64,${base64}`,
+          foto: base64.startsWith('data:image/') ? base64 : `data:image/jpeg;base64,${base64}`,
         }
       );
 
       if (response && response.success) {
-        // Actualizar el resultado localmente
-        resultado.registro_fotografico_final =
-          response.data?.registro_fotografico_final;
-        resultado.foto_final_estado = 'pendiente';
-        resultado.puedeSubirFoto = false;
+        const cambios: Partial<ResultadoInspeccion> = {
+          registro_fotografico_final: response.data?.registro_fotografico_final,
+          foto_final_estado: 'pendiente',
+          foto_final_comentario: undefined,
+          foto_final_aprobador_id: undefined,
+          foto_final_aprobada_at: undefined,
+          fotoFinalAprobador: undefined,
+        };
+        Object.assign(resultado, cambios, { puedeSubirFoto: false, puedeValidar: this.esInspector });
+        const original = this.inspeccion?.resultados?.find((item) => item.local_id === resultado.local_id);
+        if (original) Object.assign(original, cambios);
+        if (resultado.id) this.limpiarFotoSeleccionadaAlGuardar(resultado.id);
 
-        // Sincronizar la inspección a IndexedDB para que otros componentes vean los cambios
-        if (this.inspeccion?.id) {
-          await this.syncService.syncInspeccionFromServer(this.inspeccion.id);
-        }
-
-        // Recargar la inspección ANTES de mostrar la alerta
-        if (this.inspeccion?.id) {
-          await this.cargarInspeccion(this.inspeccion.id);
+        // Persistir solo los campos de la foto, conservando otros cambios locales pendientes.
+        if (this.inspeccion?.local_id && resultado.local_id) {
+          try {
+            await this.inspeccionService.actualizarFotoFinalLocal(this.inspeccion.local_id, resultado.local_id, cambios);
+          } catch (error) {
+            console.warn('Foto guardada; no se pudo actualizar la copia local:', error);
+          }
         }
 
         // Forzar detección de cambios
@@ -455,6 +561,8 @@ export class MiInspeccionDetalleComponent implements OnInit {
           'Éxito',
           'La foto ha sido subida y está pendiente de revisión por el inspector.'
         );
+      } else {
+        await this.mostrarAlerta('Error', response?.message || 'No se pudo guardar la foto. Puedes volver a intentarlo.');
       }
     } catch (error: any) {
       console.error('Error al subir foto:', error);
@@ -465,6 +573,12 @@ export class MiInspeccionDetalleComponent implements OnInit {
     } finally {
       await loading.dismiss();
     }
+  }
+
+  private limpiarFotoSeleccionadaAlGuardar(id: number) {
+    this.liberarFoto(this.fotosPendientes[id]);
+    delete this.fotosPendientes[id];
+    delete this.fotosPreparadas[id];
   }
 
   async validarFoto(resultado: ResultadoConRol, aprobado: boolean) {

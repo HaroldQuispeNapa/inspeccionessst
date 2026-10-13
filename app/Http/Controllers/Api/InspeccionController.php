@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -86,6 +87,8 @@ class InspeccionController extends Controller
             'empresa_id' => 'required|exists:empresas,id',
             'area_id' => 'required|exists:areas,id',
             'tipo_inspeccion' => 'required|in:Planeada,No Planeada,Otro',
+            'categoria' => ['nullable', 'string', 'max:80', Rule::in(Inspeccion::CATEGORIAS)],
+            'placa' => 'nullable|string|max:20',
             'fundo_id' => 'nullable|exists:fundos,id',
             'tipo_inspeccion_otro' => 'nullable|string|max:250',
             'vigencia_desde' => 'nullable|date',
@@ -213,6 +216,8 @@ class InspeccionController extends Controller
             'fundo_id' => 'nullable|exists:fundos,id',
             'area_id' => 'sometimes|required|exists:areas,id',
             'tipo_inspeccion' => 'sometimes|required|in:Planeada,No Planeada,Otro',
+            'categoria' => ['nullable', 'string', 'max:80', Rule::in(Inspeccion::CATEGORIAS)],
+            'placa' => 'nullable|string|max:20',
             'tipo_inspeccion_otro' => 'nullable|string|max:250',
             'vigencia_desde' => 'nullable|date',
             'vigencia_hasta' => 'nullable|date',

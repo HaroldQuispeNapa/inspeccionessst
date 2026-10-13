@@ -35,11 +35,11 @@ ion-icon { flex-shrink: 0; }
   ion-icon { color: var(--muted); font-size: 18px; }
   input { min-width: 0; width: 100%; border: 0; padding: 12px 0; background: transparent; color: inherit; font-size: 14px; }
 }
-.filters-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.filters-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
 .filter-field {
   min-width: 0;
   span { display: block; margin-bottom: 7px; font-size: 12px; font-weight: 600; }
-  select { width: 100%; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: var(--surface); color: inherit; font-size: 13px; text-overflow: ellipsis; }
+  select, input { box-sizing: border-box; min-width: 0; width: 100%; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: var(--surface); color: inherit; font-size: 13px; text-overflow: ellipsis; }
 }
 .filter-help { color: var(--muted); font-size: 12px; line-height: 1.5; margin-top: 14px; }
 @media (max-width: 760px) {

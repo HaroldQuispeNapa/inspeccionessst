@@ -60,6 +60,7 @@ import { InspeccionService } from '../../../services/inspeccion.service';
 import {
   Inspeccion,
   TipoInspeccion,
+  CategoriaInspeccion,
   ResultadoInspeccion,
   NivelRiesgo,
   EstadoResultado,
@@ -148,6 +149,20 @@ export class InspeccionFormPage implements OnInit {
   inspeccionOriginal: Inspeccion | null = null;
 
   tiposInspeccion: TipoInspeccion[] = ['Planeada', 'No Planeada', 'Otro'];
+  categoriasInspeccion: CategoriaInspeccion[] = [
+    'Inspecciones de maquinaria agrícola',
+    'Inspección del CSST',
+    'Inspección de actos y condiciones inseguras',
+    'Inspección de luces de emergencia',
+    'Inspección de duchas y lavaojos de emergencia',
+    'Inspección de sistema de lucha contra incendios',
+    'Inspección de manejo de agroquímicos',
+    'Inspección de instalaciones eléctricas',
+    'Inspección de uso de EPPs',
+    'Inspección de buses de transporte de personal',
+    'Inspección de equipos de altura (arnés, líneas de vida)',
+    'Inspecciones internas de Seguridad y Salud en el Trabajo',
+  ];
   nivelesRiesgo: NivelRiesgo[] = ['Alto', 'Medio', 'Bajo'];
   estadosResultado: EstadoResultado[] = [
     'Buena Práctica',
@@ -244,6 +259,8 @@ export class InspeccionFormPage implements OnInit {
       empresa_id: ['', Validators.required],
       fundo_id: [''],
       tipo_inspeccion: ['Planeada', Validators.required],
+      categoria: ['', this.isEditMode ? [] : [Validators.required]],
+      placa: ['', Validators.maxLength(20)],
       tipo_inspeccion_otro: [''],
       vigencia_desde: [now],
       vigencia_hasta: [now],
@@ -463,6 +480,8 @@ export class InspeccionFormPage implements OnInit {
           empresa_id: inspeccion.empresa_id,
           fundo_id: inspeccion.fundo_id,
           tipo_inspeccion: inspeccion.tipo_inspeccion,
+          categoria: inspeccion.categoria || '',
+          placa: inspeccion.placa || '',
           tipo_inspeccion_otro: inspeccion.tipo_inspeccion_otro,
           vigencia_desde: normalizarFecha(inspeccion.vigencia_desde),
           vigencia_hasta: normalizarFecha(inspeccion.vigencia_hasta),
@@ -624,6 +643,8 @@ export class InspeccionFormPage implements OnInit {
             ? this.areasSeleccionadas[0].id
             : null, // Compatibilidad: usar primera área o null
         tipo_inspeccion: formData.tipo_inspeccion,
+        categoria: formData.categoria || null,
+        placa: formData.placa?.trim().toUpperCase() || null,
         tipo_inspeccion_otro: formData.tipo_inspeccion_otro,
         vigencia_desde: formData.vigencia_desde,
         vigencia_hasta: formData.vigencia_hasta,
@@ -956,6 +977,7 @@ export class InspeccionFormPage implements OnInit {
 
   // ========== GESTIÓN DE RESULTADOS/HALLAZGOS ==========
   agregarResultado() {
+    const primerResultado = this.resultados[0];
     const nuevoResultado: ResultadoInspeccion = {
       local_id: uuidv4(),
       inspeccion_id: 0, // Se asignará al guardar
@@ -963,16 +985,32 @@ export class InspeccionFormPage implements OnInit {
       nivel_riesgo: 'Medio',
       estado: 'Pendiente',
       synced: false,
-      responsable_id: undefined,
-      responsable: undefined,
-      visores: [],
-      responsablesLevantamiento: [],
+      responsable_id: primerResultado?.responsable_id,
+      responsable: primerResultado?.responsable
+        ? structuredClone(primerResultado.responsable)
+        : undefined,
+      visores: structuredClone(primerResultado?.visores || []),
+      responsablesLevantamiento: structuredClone(
+        primerResultado?.responsablesLevantamiento || [],
+      ),
     };
 
     // Calcular fecha límite automática según nivel de riesgo
     this.calcularFechaLimite(nuevoResultado);
 
     this.resultados.push(nuevoResultado);
+    this.markUnsavedChanges();
+  }
+
+  limpiarAsignaciones(index: number) {
+    const resultado = this.resultados[index];
+    if (index < 1 || !resultado) return;
+
+    resultado.responsable_id = undefined;
+    resultado.responsable = undefined;
+    resultado.visores = [];
+    resultado.responsablesLevantamiento = [];
+    this.resultados = [...this.resultados];
     this.markUnsavedChanges();
   }
 

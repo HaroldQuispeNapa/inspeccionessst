@@ -64,6 +64,20 @@
         </ion-select>
       </ion-item>
 
+      <ion-item>
+        <ion-select
+          [label]="isEditMode ? 'Categoría' : 'Categoría *'"
+          labelPlacement="stacked"
+          formControlName="categoria"
+          placeholder="Seleccione una categoría"
+          interface="action-sheet"
+        >
+          <ion-select-option *ngFor="let categoria of categoriasInspeccion" [value]="categoria">
+            {{ categoria }}
+          </ion-select-option>
+        </ion-select>
+      </ion-item>
+
       <ion-item *ngIf="inspeccionForm.get('tipo_inspeccion')?.value === 'Otro'">
         <ion-input
           label="Especificar tipo *"
@@ -74,6 +88,7 @@
         ></ion-input>
       </ion-item>
 
+      <ng-container *ngIf="isEditMode">
       <ion-list-header>
         <ion-label>Vigencia</ion-label>
       </ion-list-header>
@@ -112,9 +127,23 @@
         </ion-modal>
       </ion-item>
 
+      </ng-container>
+
       <ion-list-header>
         <ion-label>Datos de la Inspección</ion-label>
       </ion-list-header>
+
+      <ion-item>
+        <ion-input
+          label="Placa (opcional)"
+          labelPlacement="stacked"
+          formControlName="placa"
+          placeholder="Ej. ABC-123"
+          [maxlength]="20"
+          autocapitalize="characters"
+          [clearInput]="true"
+        ></ion-input>
+      </ion-item>
 
       <ion-item>
         <ion-input
@@ -287,6 +316,9 @@
         </ion-card-header>
 
         <ion-card-content>
+          <p *ngIf="inspeccionForm.get('placa')?.value" class="ion-padding-horizontal">
+            <strong>Placa:</strong> {{ inspeccionForm.get('placa')?.value | uppercase }}
+          </p>
           <ion-item>
             <ion-textarea
               label="Descripción *"
@@ -318,6 +350,15 @@
           </ion-item>
 
           <!-- Responsable del Resultado -->
+          <ion-item *ngIf="i > 0" lines="none">
+            <ion-button type="button" fill="outline" color="medium" size="small"
+              (click)="limpiarAsignaciones(i)"
+              [disabled]="!resultado.responsable_id && !resultado.responsable && !resultado.visores?.length && !resultado.responsablesLevantamiento?.length"
+              [attr.aria-label]="'Limpiar asignaciones del resultado ' + (i + 1)">
+              <ion-icon slot="start" name="close-outline"></ion-icon>
+              Limpiar asignaciones
+            </ion-button>
+          </ion-item>
           <ion-item button (click)="seleccionarResponsable(i)">
             <ion-icon name="person-outline" slot="start" [color]="resultado.responsable ? 'success' : 'medium'"></ion-icon>
             <ion-label>

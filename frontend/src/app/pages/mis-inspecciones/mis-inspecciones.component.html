@@ -42,10 +42,15 @@
         </div>
         <label class="search-field">
           <ion-icon name="search-outline" aria-hidden="true"></ion-icon>
-          <input type="search" aria-label="Buscar inspecciones" placeholder="Buscar por registro, objetivo o zona..."
+          <input type="search" aria-label="Buscar inspecciones" placeholder="Buscar por registro, placa, objetivo o zona..."
             [(ngModel)]="busqueda" (ngModelChange)="aplicarFiltros()">
         </label>
         <div class="filters-grid">
+          <label class="filter-field">
+            <span>Placa</span>
+            <input type="search" placeholder="Todas las placas" aria-label="Filtrar por placa"
+              [(ngModel)]="filtroPlaca" (ngModelChange)="aplicarFiltros()">
+          </label>
           <label class="filter-field">
             <span>Fundo / Sede</span>
             <select [(ngModel)]="filtroSede" (ngModelChange)="aplicarFiltros()">
@@ -119,6 +124,7 @@
               <span><ion-icon name="location-outline" aria-hidden="true"></ion-icon> {{ vista.sede.nombre }}</span>
               <span><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon> {{ formatDateTime(vista.inspeccion.fecha_hora_inspeccion) }}</span>
               <span class="type-badge">{{ vista.tipo }}</span>
+              <span *ngIf="vista.inspeccion.placa"><strong>Placa:</strong> {{ vista.inspeccion.placa }}</span>
             </div>
             <div class="areas-list">
               <span class="field-label">Áreas</span>
@@ -149,6 +155,7 @@
                     <strong>Acción a tomar</strong><p>{{ tarea.resultado.accion_tomar }}</p>
                   </div>
                   <div class="task-meta">
+                    <span *ngIf="vista.inspeccion.placa"><strong>Placa:</strong> {{ vista.inspeccion.placa }}</span>
                     <span><strong>Responsable:</strong> {{ tarea.responsable }}</span>
                     <span *ngIf="tarea.resultado.nivel_riesgo"><strong>Riesgo:</strong> {{ tarea.resultado.nivel_riesgo }}</span>
                     <span *ngIf="tarea.resultado.fecha_cierre"><strong>Fecha de cierre:</strong> {{ formatDate(tarea.resultado.fecha_cierre) }}</span>
@@ -168,7 +175,7 @@
       </div>
       <div class="empty-state" *ngIf="inspeccionesFiltradas.length === 0" role="status">
         <ion-icon name="search-outline" aria-hidden="true"></ion-icon>
-        <h2>No hay coincidencias</h2><p>Prueba otra combinación de sede, área, tipo o estado.</p>
+        <h2>No hay coincidencias</h2><p>Prueba otra combinación de placa, sede, área, tipo o estado.</p>
         <ion-button fill="outline" (click)="limpiarFiltros()">Limpiar filtros</ion-button>
       </div>
       <div class="load-more" *ngIf="inspeccionesVisibles.length < inspeccionesFiltradas.length">

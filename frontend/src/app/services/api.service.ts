@@ -57,10 +57,23 @@ export class ApiService {
       // Error del servidor
       errorMessage =
         error.error?.message || `Error ${error.status}: ${error.statusText}`;
+      if (error.status === 422 && error.error?.errors && typeof error.error.errors === 'object') {
+        const mensajes = Object.values(error.error.errors).reduce<string[]>((lista, valor) => {
+          const textos = Array.isArray(valor)
+            ? valor.filter((texto): texto is string => typeof texto === 'string')
+            : typeof valor === 'string' ? [valor] : [];
+          return lista.concat(textos);
+        }, []);
+        if (mensajes.length) errorMessage = [...new Set(mensajes)].join('\n');
+      }
     }
 
     console.error('API Error:', errorMessage, error);
-    return throwError(() => new Error(errorMessage));
+    const apiError = Object.assign(new Error(errorMessage), {
+      status: error.status,
+      validationErrors: error.error?.errors,
+    });
+    return throwError(() => apiError);
   }
 
   /**

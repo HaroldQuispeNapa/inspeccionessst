@@ -11,6 +11,24 @@ class Inspeccion extends Model
 {
     use HasFactory, SoftDeletes;
 
+    public const CATEGORIAS = [
+        'Inspecciones de maquinaria agrícola',
+        'Inspección del CSST',
+        'Inspección de actos y condiciones inseguras',
+        'Inspección de luces de emergencia',
+        'Inspección de duchas y lavaojos de emergencia',
+        'Inspección de sistema de lucha contra incendios',
+        'Inspección de manejo de agroquímicos',
+        'Inspección de instalaciones eléctricas',
+        'Inspección de uso de EPPs',
+        'Inspección de buses de transporte de personal',
+        'Inspección de equipos de altura (arnés, líneas de vida)',
+        'Inspecciones internas de Seguridad y Salud en el Trabajo',
+        // Compatibilidad con inspecciones guardadas antes de ampliar el catálogo.
+        'Inspección eléctrica',
+        'Inspección sanitaria',
+    ];
+
     protected $table = 'inspecciones';
 
     protected $fillable = [
@@ -20,6 +38,8 @@ class Inspeccion extends Model
         'area_id',
         'fundo_id',
         'tipo_inspeccion',
+        'categoria',
+        'placa',
         'tipo_inspeccion_otro',
         'vigencia_desde',
         'vigencia_hasta',
@@ -37,6 +57,12 @@ class Inspeccion extends Model
         'synced',
         'synced_at',
     ];
+
+    public function setPlacaAttribute(?string $value): void
+    {
+        $placa = mb_strtoupper(trim($value ?? ''));
+        $this->attributes['placa'] = $placa === '' ? null : $placa;
+    }
 
     protected $casts = [
         'user_id' => 'integer',
@@ -193,6 +219,7 @@ class Inspeccion extends Model
             'responsablesArea.area:id,name',
             'resultados.responsables.personal:id,nombres,apellido_paterno,apellido_materno',
             'resultados.responsable:id,nombres,apellido_paterno,apellido_materno,cargo_id',
+            'resultados.comentarios.user:id,name',
             'resultados.visores:id,nombres,apellido_paterno,apellido_materno,cargo_id',
             'resultados.responsablesLevantamiento:id,nombres,apellido_paterno,apellido_materno,cargo_id',
             'resultados.fotoFinalAprobador:id,nombres,apellido_paterno,apellido_materno,cargo_id',

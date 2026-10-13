@@ -36,6 +36,8 @@
             <p><strong>Área:</strong> {{ inspeccion.area?.name || 'N/A' }}</p>
             <!-- <p><strong>Número de registro:</strong> {{ inspeccion.numero_registro || 'N/A' }}</p> -->
             <p><strong>Fecha:</strong> {{ formatDateTime(inspeccion.fecha_hora_inspeccion) }}</p>
+            <p *ngIf="inspeccion.categoria"><strong>Categoría:</strong> {{ inspeccion.categoria }}</p>
+            <p *ngIf="inspeccion.placa"><strong>Placa:</strong> {{ inspeccion.placa }}</p>
           </ion-label>
         </ion-item>
 
@@ -75,6 +77,7 @@
 
       <ion-card-content>
         <!-- Descripción -->
+        <p *ngIf="inspeccion.placa"><strong>Placa:</strong> {{ inspeccion.placa }}</p>
         <p class="descripcion">{{ resultado.descripcion }}</p>
 
         <!-- Acción a tomar -->
@@ -108,18 +111,19 @@
               <ion-label><strong>Foto Levantamiento</strong></ion-label>
               
               <!-- Si hay foto -->
-              <div class="foto-preview" *ngIf="resultado.registro_fotografico_final" (click)="verFoto(getImageUrl(resultado.registro_fotografico_final), 'Foto Levantamiento')">
-                <img [src]="getImageUrl(resultado.registro_fotografico_final)" alt="Foto final">
+              <div class="foto-preview" *ngIf="fotosPendientes[resultado.id!] || resultado.registro_fotografico_final"
+                (click)="verFoto(fotosPendientes[resultado.id!] || getImageUrl(resultado.registro_fotografico_final || ''), 'Foto Levantamiento')">
+                <img [src]="fotosPendientes[resultado.id!] || getImageUrl(resultado.registro_fotografico_final || '')" alt="Foto de levantamiento">
               </div>
 
               <!-- Si no hay foto -->
-              <div class="foto-placeholder" *ngIf="!resultado.registro_fotografico_final">
+              <div class="foto-placeholder" *ngIf="!fotosPendientes[resultado.id!] && !resultado.registro_fotografico_final">
                 <ion-icon name="image-outline"></ion-icon>
                 <span>Sin foto</span>
               </div>
 
               <!-- Estado de la foto -->
-              <ion-badge *ngIf="resultado.registro_fotografico_final" [color]="getFotoEstadoColor(resultado.foto_final_estado)" class="foto-estado-badge">
+              <ion-badge *ngIf="resultado.registro_fotografico_final && !fotosPendientes[resultado.id!]" [color]="getFotoEstadoColor(resultado.foto_final_estado)" class="foto-estado-badge">
                 {{ getFotoEstadoTexto(resultado.foto_final_estado) }}
               </ion-badge>
 
@@ -135,7 +139,7 @@
               </div>
 
               <!-- Comentario de rechazo -->
-              <div class="rechazo-comentario" *ngIf="resultado.foto_final_estado === 'rechazada' && resultado.foto_final_comentario">
+              <div class="rechazo-comentario" *ngIf="!fotosPendientes[resultado.id!] && resultado.foto_final_estado === 'rechazada' && resultado.foto_final_comentario">
                 <ion-text color="danger">
                   <small><ion-icon name="warning-outline"></ion-icon> {{ resultado.foto_final_comentario }}</small>
                 </ion-text>
@@ -144,6 +148,29 @@
           </ion-col>
         </ion-row>
 
+        <section class="comentarios-section" aria-label="Comentarios del resultado">
+          <h3>Comentarios</h3>
+          <article *ngFor="let comentario of resultado.comentarios" class="comentario-item">
+            <div class="comentario-meta">
+              <strong>{{ comentario.user?.name || 'Usuario' }}</strong>
+              <span>{{ comentario.created_at | date:'dd/MM/yyyy HH:mm':'-0500' }}</span>
+            </div>
+            <p>{{ comentario.contenido }}</p>
+          </article>
+          <p class="sin-comentarios" *ngIf="!resultado.comentarios?.length">Aún no hay comentarios registrados.</p>
+          <ng-container *ngIf="resultado.puedeComentar">
+            <ion-textarea label="Agregar comentario" labelPlacement="stacked" placeholder="Describe el avance o la atención del hallazgo..."
+              [(ngModel)]="comentariosBorrador[resultado.id!]" (ngModelChange)="erroresComentario[resultado.id!] = ''"
+              [autoGrow]="true" [maxlength]="2000" [disabled]="guardandoComentarios[resultado.id!]">
+            </ion-textarea>
+            <p class="comentario-error" *ngIf="erroresComentario[resultado.id!]" role="alert">{{ erroresComentario[resultado.id!] }}</p>
+            <ion-button size="small" (click)="guardarComentario(resultado)"
+              [disabled]="guardandoComentarios[resultado.id!] || !(comentariosBorrador[resultado.id!] || '').trim()">
+              {{ guardandoComentarios[resultado.id!] ? 'Guardando...' : 'Registrar comentario' }}
+            </ion-button>
+          </ng-container>
+        </section>
+
         <!-- Acciones -->
         <div class="acciones">
           <!-- Botón para subir foto (responsable de levantamiento) -->
@@ -151,10 +178,24 @@
             *ngIf="resultado.puedeSubirFoto" 
             expand="block" 
             (click)="subirFoto(resultado)"
-            color="primary">
+            color="primary" [disabled]="guardandoFotos[resultado.id!] || seleccionandoFotos[resultado.id!]">
             <ion-icon slot="start" name="cloud-upload-outline"></ion-icon>
-            {{ resultado.foto_final_estado === 'rechazada' ? 'Subir Nueva Foto' : 'Subir Foto de Levantamiento' }}
+            {{ seleccionandoFotos[resultado.id!] ? 'Abriendo foto...' : (fotosPendientes[resultado.id!] ? 'Cambiar foto seleccionada' : 'Seleccionar foto de levantamiento') }}
           </ion-button>
+
+          <div class="foto-borrador" *ngIf="fotosPendientes[resultado.id!]">
+            <p>Foto seleccionada. Guarda para enviarla a revisión.</p>
+            <div class="foto-borrador-acciones">
+              <ion-button fill="outline" color="medium" (click)="limpiarFotoSeleccionada(resultado)" [disabled]="guardandoFotos[resultado.id!]">
+                <ion-icon slot="start" name="close-outline"></ion-icon> Limpiar foto
+              </ion-button>
+              <ion-button (click)="guardarFotoSeleccionada(resultado)" [disabled]="guardandoFotos[resultado.id!]">
+                <ion-icon slot="start" name="cloud-upload-outline"></ion-icon>
+                <ion-spinner *ngIf="guardandoFotos[resultado.id!]" name="dots"></ion-spinner>
+                {{ guardandoFotos[resultado.id!] ? 'Preparando y guardando...' : 'Guardar foto' }}
+              </ion-button>
+            </div>
+          </div>
 
           <!-- Botones de validación (inspector) -->
           <ion-row *ngIf="resultado.puedeValidar" class="validacion-buttons">

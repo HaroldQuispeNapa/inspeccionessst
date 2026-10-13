@@ -32,7 +32,7 @@ describe('MisInspeccionesComponent', () => {
 
   beforeEach(async () => {
     inspecciones = [
-      inspeccion(1, { resultados: [resultado('Pendiente', 1), resultado('Ejecutado', 2), resultado('Pendiente', 3)] }),
+      inspeccion(1, { placa: 'ABC-123', resultados: [resultado('Pendiente', 1), resultado('Ejecutado', 2), resultado('Pendiente', 3)] }),
       inspeccion(2, { tipo_inspeccion: 'Planeada', resultados: [resultado('Ejecutado', 4)] }),
       inspeccion(3, { fundo_id: 8, fundo: { id: 8, nombre: 'FUNDO NORTE', activo: true }, area_id: 75,
         area: { id: 75, name: 'PRODUCCIÓN', empresa_id: 1, activo: true } }),
@@ -61,6 +61,8 @@ describe('MisInspeccionesComponent', () => {
   it('muestra los filtros y el detalle de los hallazgos y sus responsables', () => {
     const pantalla: HTMLElement = fixture.nativeElement;
     expect(pantalla.querySelectorAll('.filter-field select').length).toBe(4);
+    expect(pantalla.querySelector('input[aria-label="Filtrar por placa"]')).not.toBeNull();
+    expect(pantalla.querySelector('.task-meta')?.textContent).toContain('ABC-123');
     expect(pantalla.textContent).toContain('Renovar los equipos de protección personal.');
     expect(pantalla.textContent).toContain('ANA PÉREZ');
     expect(component.totalPendientes).toBe(3);
@@ -89,6 +91,25 @@ describe('MisInspeccionesComponent', () => {
       component.aplicarFiltros();
       expect(component.inspeccionesFiltradas.map((vista) => vista.inspeccion.id)).toEqual(esperadas[estado]);
     }
+  });
+
+  it('filtra por parte de la placa sin distinguir mayúsculas, combina filtros y los restablece', () => {
+    component.filtroPlaca = '  abc  ';
+    component.filtroEstado = 'Pendiente';
+    component.filtroSede = '4';
+    component.aplicarFiltros();
+    expect(component.inspeccionesFiltradas.map((vista) => vista.inspeccion.id)).toEqual([1]);
+    expect(component.totalResultados).toBe(3);
+    expect(component.hayFiltros).toBeTrue();
+    component.filtroEstado = 'Cumplimiento';
+    component.aplicarFiltros();
+    expect(component.inspeccionesFiltradas).toEqual([]);
+    component.limpiarFiltros();
+    expect(component.filtroPlaca).toBe('');
+    expect(component.inspeccionesFiltradas.length).toBe(4);
+    component.busqueda = 'abc-123';
+    component.aplicarFiltros();
+    expect(component.inspeccionesFiltradas.map((vista) => vista.inspeccion.id)).toEqual([1]);
   });
 
   it('incluye las áreas secundarias del backend y los pivotes locales sin duplicar la principal', () => {
