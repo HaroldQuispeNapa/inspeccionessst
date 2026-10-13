@@ -1,0 +1,41 @@
+// Resumen y tarjetas de inspecciones.
+.summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 20px 0 28px; }
+.summary-item {
+  display: flex; flex-direction: column; gap: 6px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
+  span { font-size: 12px; font-weight: 600; color: var(--muted); }
+  strong { font-size: 30px; line-height: 1.2; }
+  small { color: var(--muted); font-size: 11px; }
+}
+.summary-warning strong { color: #a46510; }
+.list-heading {
+  margin-bottom: 14px;
+  h2 { font-size: 18px; font-weight: 600; }
+  h2 span { margin-left: 8px; color: var(--muted); font-size: 14px; font-weight: 400; }
+  p { color: var(--muted); font-size: 12px; }
+}
+.inspections-list { display: grid; gap: 16px; }
+.inspeccion-card {
+  margin: 0; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 2px 5px rgba(20, 40, 60, 0.03); color: inherit; --background: var(--surface);
+  &.has-pending { border-left: 4px solid #dfa33e; }
+  ion-card-content { padding: 22px; }
+}
+.card-heading {
+  align-items: flex-start;
+  > div { min-width: 0; }
+  h3 { margin-top: 5px; font-size: 19px; font-weight: 700; overflow-wrap: anywhere; }
+}
+.empresa-name { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.record-reference { color: var(--muted); margin-top: 3px; font-size: 11px; }
+.pending-badge, .complete-badge, .type-badge, .area-badge, .state-badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; padding: 5px 9px; font-size: 12px; font-weight: 600; line-height: 1.5; }
+.pending-badge, .complete-badge { flex-shrink: 0; }
+.pending-badge { background: #fff1d7; color: #82520b; }
+.complete-badge { background: #e5f5ed; color: #236345; }
+.inspection-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 20px; margin: 16px 0 12px; color: var(--muted); font-size: 12px; }
+.inspection-meta > span { display: inline-flex; align-items: center; gap: 6px; }
+.inspection-meta ion-icon { font-size: 16px; color: var(--ion-color-primary); }
+.type-badge { background: rgba(var(--ion-color-primary-rgb), 0.1); color: var(--ion-color-primary-shade); }
+.areas-list { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.field-label { font-size: 12px; font-weight: 600; margin-right: 4px; }
+.area-badge { background: var(--ion-color-step-50, #f0f3f6); color: var(--muted); font-size: 11px; font-weight: 500; overflow-wrap: anywhere; }
+.inspection-objective { margin-top: 16px; font-size: 14px; font-weight: 500; line-height: 1.6; white-space: pre-line; }
+.inspection-zone { margin-top: 6px; font-size: 12px; color: var(--muted); }

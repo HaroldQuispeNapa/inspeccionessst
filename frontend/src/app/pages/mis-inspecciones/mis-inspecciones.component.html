@@ -1,11 +1,11 @@
 <ion-header [translucent]="true">
   <ion-toolbar color="primary">
     <ion-buttons slot="start">
-      <ion-button (click)="goBack()">
+      <ion-button (click)="goBack()" aria-label="Volver al inicio">
         <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
-    <ion-title>Mis Inspecciones</ion-title>
+    <ion-title>Mis inspecciones</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -13,72 +13,172 @@
   <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
+  <div class="page-container">
+    <div class="loading-state" *ngIf="loading" role="status">
+      <ion-spinner></ion-spinner><p>Cargando inspecciones...</p>
+    </div>
+    <div class="error-state" *ngIf="!loading && errorCarga" role="alert">
+      <p>{{ errorCarga }}</p>
+      <ion-button fill="outline" size="small" (click)="cargarInspecciones()">Reintentar</ion-button>
+    </div>
 
-  <div class="ion-padding ion-text-center" *ngIf="loading">
-    <ion-spinner></ion-spinner>
-    <p>Cargando inspecciones...</p>
-  </div>
+    <ng-container *ngIf="!loading && inspecciones.length > 0">
+      <div class="page-heading">
+        <div>
+          <p class="eyebrow">SEGUIMIENTO DE SEGURIDAD</p>
+          <h1>Inspecciones y tareas</h1>
+          <p>Consulta los hallazgos y encuentra las inspecciones que necesitan atención.</p>
+        </div>
+        <button type="button" class="pending-shortcut" [class.active]="filtroEstado === 'Pendiente'"
+          [attr.aria-pressed]="filtroEstado === 'Pendiente'" (click)="togglePendientes()">
+          <ion-icon name="time-outline" aria-hidden="true"></ion-icon> Solo con pendientes
+        </button>
+      </div>
 
-  <div *ngIf="!loading && inspecciones.length > 0">
-    <ion-card *ngFor="let inspeccion of inspecciones" class="inspeccion-card" (click)="verDetalle(inspeccion)">
-      <ion-card-content>
-        <ion-grid class="ion-no-padding">
-          <ion-row>
-            <!-- Columna izquierda: Info de la inspección -->
-            <ion-col size="7" size-md="8">
-              <div class="inspeccion-info">
-                <h1 class="inspeccion-id">{{ inspeccion.numero_registro }}</h1>
-                <p class="empresa-name">{{ inspeccion.empresa?.name || 'Sin empresa' }}</p>
-                <!-- sede -->
-                <p><strong>Sede:</strong> {{ inspeccion.fundo?.nombre || 'N/A' }}</p>
-                 <!-- área -->
-                <h2 class="area-name">{{ inspeccion.area?.name || 'Sin área' }}</h2>
-                <p class="fecha">{{ formatDateTime(inspeccion.fecha_hora_inspeccion) }}</p>
-                <ion-chip color="primary">
-                  {{ inspeccion.tipo_inspeccion }}
-                </ion-chip>
+      <section class="filters-panel" aria-labelledby="filters-title">
+        <div class="filters-heading">
+          <h2 id="filters-title"><ion-icon name="options-outline" aria-hidden="true"></ion-icon> Filtrar inspecciones</h2>
+          <button type="button" class="clear-button" *ngIf="hayFiltros" (click)="limpiarFiltros()">Limpiar filtros</button>
+        </div>
+        <label class="search-field">
+          <ion-icon name="search-outline" aria-hidden="true"></ion-icon>
+          <input type="search" aria-label="Buscar inspecciones" placeholder="Buscar por registro, objetivo o zona..."
+            [(ngModel)]="busqueda" (ngModelChange)="aplicarFiltros()">
+        </label>
+        <div class="filters-grid">
+          <label class="filter-field">
+            <span>Fundo / Sede</span>
+            <select [(ngModel)]="filtroSede" (ngModelChange)="aplicarFiltros()">
+              <option value="">Todas las sedes</option>
+              <option *ngFor="let sede of sedes" [value]="sede.id">{{ sede.nombre }}</option>
+            </select>
+          </label>
+          <label class="filter-field">
+            <span>Área</span>
+            <select [(ngModel)]="filtroArea" (ngModelChange)="aplicarFiltros()">
+              <option value="">Todas las áreas</option>
+              <option *ngFor="let area of areas" [value]="area.id">{{ area.nombre }}</option>
+            </select>
+          </label>
+          <label class="filter-field">
+            <span>Tipo de inspección</span>
+            <select [(ngModel)]="filtroTipo" (ngModelChange)="aplicarFiltros()">
+              <option value="">Todos los tipos</option>
+              <option *ngFor="let tipo of tipos" [value]="tipo">{{ tipo }}</option>
+            </select>
+          </label>
+          <label class="filter-field">
+            <span>Estado del resultado</span>
+            <select [(ngModel)]="filtroEstado" (ngModelChange)="aplicarFiltros()" aria-describedby="state-help">
+              <option value="">Todos los estados</option>
+              <option *ngFor="let estado of estados" [value]="estado">{{ estado }}</option>
+            </select>
+          </label>
+        </div>
+        <p id="state-help" class="filter-help">El estado muestra inspecciones con al menos un resultado en ese estado. Puedes combinar los filtros.</p>
+      </section>
+
+      <section class="summary-grid" aria-label="Resumen de las inspecciones filtradas" aria-live="polite">
+        <div class="summary-item">
+          <span>Inspecciones en esta vista</span><strong>{{ inspeccionesFiltradas.length }}</strong>
+          <small>de {{ inspecciones.length }} asignadas</small>
+        </div>
+        <div class="summary-item summary-warning">
+          <span>Con resultados pendientes</span><strong>{{ inspeccionesConPendientes }}</strong>
+          <small>inspecciones por atender</small>
+        </div>
+        <div class="summary-item">
+          <span>Tareas pendientes</span><strong>{{ totalPendientes }}</strong>
+          <small>de {{ totalResultados }} resultados en esta vista</small>
+        </div>
+      </section>
+
+      <div class="list-heading" *ngIf="inspeccionesFiltradas.length > 0">
+        <h2>Inspecciones <span>{{ inspeccionesFiltradas.length }}</span></h2>
+        <p>Mostrando {{ inspeccionesVisibles.length }} de {{ inspeccionesFiltradas.length }}</p>
+      </div>
+      <div class="inspections-list">
+        <ion-card *ngFor="let vista of inspeccionesVisibles; trackBy: trackInspeccion" class="inspeccion-card"
+          [class.has-pending]="vista.resumen.Pendiente > 0">
+          <ion-card-content>
+            <div class="card-heading">
+              <div>
+                <p class="empresa-name">{{ vista.inspeccion.empresa?.name || vista.inspeccion.razon_social || 'Sin empresa' }}</p>
+                <h3>{{ vista.inspeccion.numero_registro || 'Sin número de registro' }}</h3>
+                <p class="record-reference">ID: {{ vista.inspeccion.id }}</p>
               </div>
-            </ion-col>
-
-            <!-- Columna derecha: Resumen de resultados -->
-            <ion-col size="5" size-md="4">
-              <div class="resumen-column" *ngIf="inspeccion.resultados && inspeccion.resultados.length > 0">
-                <div class="stat-row stat-buena-practica">
-                  <span class="stat-label">Buena práctica:</span>
-                  <span class="stat-value">{{ getConteoEstado(inspeccion, 'Buena Práctica') }}</span>
-                </div>
-                <div class="stat-row stat-cumplimiento">
-                  <span class="stat-label">Cumplimiento:</span>
-                  <span class="stat-value">{{ getConteoEstado(inspeccion, 'Cumplimiento') }}</span>
-                </div>
-                <div class="stat-row stat-pendiente">
-                  <span class="stat-label">Pendiente:</span>
-                  <span class="stat-value">{{ getConteoEstado(inspeccion, 'Pendiente') }}</span>
-                </div>
-                <div class="stat-row stat-ejecutado">
-                  <span class="stat-label">Ejecutado:</span>
-                  <span class="stat-value">{{ getConteoEstado(inspeccion, 'Ejecutado') }}</span>
-                </div>
+              <span class="pending-badge" *ngIf="vista.resumen.Pendiente > 0; else sinPendientes">
+                <ion-icon name="time-outline" aria-hidden="true"></ion-icon>
+                {{ vista.resumen.Pendiente }} {{ vista.resumen.Pendiente === 1 ? 'pendiente' : 'pendientes' }}
+              </span>
+              <ng-template #sinPendientes>
+                <span class="complete-badge"><ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon> Sin pendientes</span>
+              </ng-template>
+            </div>
+            <div class="inspection-meta">
+              <span><ion-icon name="location-outline" aria-hidden="true"></ion-icon> {{ vista.sede.nombre }}</span>
+              <span><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon> {{ formatDateTime(vista.inspeccion.fecha_hora_inspeccion) }}</span>
+              <span class="type-badge">{{ vista.tipo }}</span>
+            </div>
+            <div class="areas-list">
+              <span class="field-label">Áreas</span>
+              <span class="area-badge" *ngFor="let area of vista.areas">{{ area.nombre }}</span>
+            </div>
+            <p class="inspection-objective" *ngIf="vista.inspeccion.objetivo">{{ vista.inspeccion.objetivo }}</p>
+            <p class="inspection-zone" *ngIf="vista.inspeccion.zona_inspeccionada"><strong>Zona:</strong> {{ vista.inspeccion.zona_inspeccionada }}</p>
+            <div class="result-summary" aria-label="Conteo de resultados por estado">
+              <div class="state-count pendiente"><strong>{{ vista.resumen.Pendiente }}</strong><span>Pendientes</span></div>
+              <div class="state-count ejecutado"><strong>{{ vista.resumen.Ejecutado }}</strong><span>Ejecutados</span></div>
+              <div class="state-count cumplimiento"><strong>{{ vista.resumen.Cumplimiento }}</strong><span>Cumplimiento</span></div>
+              <div class="state-count buena-practica"><strong>{{ vista.resumen['Buena Práctica'] }}</strong><span>Buena práctica</span></div>
+            </div>
+            <details class="tasks-detail">
+              <summary>
+                <span>Ver tareas y resultados <span class="task-total">{{ vista.resultados.length }}</span></span>
+                <ion-icon name="chevron-down-outline" aria-hidden="true"></ion-icon>
+              </summary>
+              <div class="task-list">
+                <article *ngFor="let tarea of vista.resultados; let index = index" class="task-card"
+                  [class.task-matches-filter]="filtroEstado && tarea.estado === filtroEstado">
+                  <div class="task-heading">
+                    <h4>Resultado {{ index + 1 }}</h4>
+                    <span class="state-badge" [ngClass]="tarea.claseEstado">{{ tarea.estado }}</span>
+                  </div>
+                  <p class="task-description">{{ tarea.resultado.descripcion || 'Sin descripción' }}</p>
+                  <div class="task-action" *ngIf="tarea.resultado.accion_tomar">
+                    <strong>Acción a tomar</strong><p>{{ tarea.resultado.accion_tomar }}</p>
+                  </div>
+                  <div class="task-meta">
+                    <span><strong>Responsable:</strong> {{ tarea.responsable }}</span>
+                    <span *ngIf="tarea.resultado.nivel_riesgo"><strong>Riesgo:</strong> {{ tarea.resultado.nivel_riesgo }}</span>
+                    <span *ngIf="tarea.resultado.fecha_cierre"><strong>Fecha de cierre:</strong> {{ formatDate(tarea.resultado.fecha_cierre) }}</span>
+                  </div>
+                </article>
               </div>
-              <div class="ver-detalle">
-                <ion-text color="primary">
-                  Ver detalle <ion-icon name="chevron-forward-outline"></ion-icon>
-                </ion-text>
-              </div>
-            </ion-col>
-          </ion-row>
-        </ion-grid>
-      </ion-card-content>
-
-      <!-- Indicador de sincronización -->
-      <!-- <div class="sync-indicator" [class.synced]="inspeccion.synced">
-        <ion-icon [name]="inspeccion.synced ? 'cloud-done-outline' : 'cloud-offline-outline'"></ion-icon>
-      </div> -->
-    </ion-card>
-  </div>
-
-  <div class="ion-padding ion-text-center" *ngIf="!loading && inspecciones.length === 0">
-    <ion-icon name="document-outline" size="large" color="medium"></ion-icon>
-    <p>No tienes inspecciones asignadas</p>
+            </details>
+            <div class="card-footer">
+              <ion-button fill="clear" size="small" (click)="verDetalle(vista.inspeccion)"
+                [attr.aria-label]="'Abrir detalle de ' + vista.inspeccion.numero_registro">
+                Abrir detalle de inspección
+                <ion-icon slot="end" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+              </ion-button>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </div>
+      <div class="empty-state" *ngIf="inspeccionesFiltradas.length === 0" role="status">
+        <ion-icon name="search-outline" aria-hidden="true"></ion-icon>
+        <h2>No hay coincidencias</h2><p>Prueba otra combinación de sede, área, tipo o estado.</p>
+        <ion-button fill="outline" (click)="limpiarFiltros()">Limpiar filtros</ion-button>
+      </div>
+      <div class="load-more" *ngIf="inspeccionesVisibles.length < inspeccionesFiltradas.length">
+        <ion-button fill="outline" (click)="mostrarMas()">Mostrar más inspecciones</ion-button>
+        <p>{{ inspeccionesVisibles.length }} de {{ inspeccionesFiltradas.length }}</p>
+      </div>
+    </ng-container>
+    <div class="empty-state" *ngIf="!loading && !errorCarga && inspecciones.length === 0" role="status">
+      <ion-icon name="document-outline" aria-hidden="true"></ion-icon>
+      <h2>No tienes inspecciones asignadas</h2><p>Las inspecciones disponibles aparecerán aquí con sus resultados.</p>
+    </div>
   </div>
 </ion-content>

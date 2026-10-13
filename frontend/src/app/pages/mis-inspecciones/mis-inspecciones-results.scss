@@ -1,0 +1,32 @@
+// Estados y detalle de tareas.
+.result-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 18px 0; }
+.state-count { display: flex; align-items: center; gap: 9px; padding: 11px 12px; border-radius: 8px; strong { font-size: 19px; } span { font-size: 12px; } }
+.pendiente { background: #fff4df; color: #82520b; }
+.ejecutado { background: #e6f4ed; color: #236345; }
+.cumplimiento { background: #e9f0fb; color: #315a93; }
+.buena-practica { background: #f0ebfa; color: #695098; }
+.tasks-detail {
+  border-top: 1px solid var(--line);
+  summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; cursor: pointer; list-style: none; color: var(--ion-color-primary-shade); font-size: 13px; font-weight: 600; }
+  summary::-webkit-details-marker { display: none; }
+  &[open] summary > ion-icon { transform: rotate(180deg); }
+}
+.task-total { margin-left: 6px; color: var(--muted); font-weight: 400; }
+.task-list { display: grid; gap: 12px; padding: 6px 0 16px; }
+.task-card { padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); &.task-matches-filter { border-color: var(--ion-color-primary); } }
+.task-heading h4 { font-size: 13px; font-weight: 600; }
+.task-description { margin-top: 12px; white-space: pre-line; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.task-action { margin-top: 12px; font-size: 12px; line-height: 1.6; strong { color: var(--ion-color-primary-shade); } p { margin-top: 3px; white-space: pre-line; overflow-wrap: anywhere; } }
+.task-meta { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); }
+.card-footer { display: flex; justify-content: flex-end; border-top: 1px solid var(--line); padding-top: 6px; ion-button { margin: 0 -8px 0 0; font-size: 12px; text-transform: none; } }
+.loading-state, .empty-state, .load-more { text-align: center; padding: 40px 16px; color: var(--muted); p { font-size: 13px; line-height: 1.6; margin: 10px 0; } }
+.empty-state { ion-icon { font-size: 38px; color: var(--ion-color-primary); } h2 { margin-top: 12px; font-size: 19px; color: var(--ion-text-color, #203344); } }
+.load-more { padding-bottom: 0; }
+.error-state { padding: 16px; margin-bottom: 16px; border-radius: 10px; background: rgba(var(--ion-color-danger-rgb), 0.1); p { color: var(--ion-color-danger-shade); } }
+@media (prefers-color-scheme: dark) {
+  .pending-badge, .pending-shortcut.active, .pendiente { background: #45361d; color: #ffd18a; }
+  .complete-badge, .ejecutado { background: #203d30; color: #99dbb6; }
+  .cumplimiento { background: #23364e; color: #b3d1fc; }
+  .buena-practica { background: #362b4c; color: #d0b6f2; }
+  .summary-warning strong { color: #ffd18a; }
+}
